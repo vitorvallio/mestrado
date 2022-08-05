@@ -1,0 +1,1697 @@
+---
+title: "analise_mestrado"
+format: html
+editor: visual
+---
+
+```{r}
+
+#install.packages("tidyverse") \# manipulacao de dados
+
+#install.packages("readxl") \# ler aquivo ecxel
+
+#install.packages("janitor") \# limpar nomes
+
+#install.packages("KableExtra") \# Visualizar tabelas
+
+#install.packages("psych") \# analise estatistica em psicometria
+
+#install.packages("lavann") \# analise fatorial confirmatoria
+
+library(tidyverse)
+
+library(kableExtra)
+
+library(psych)
+
+library(lavaan)
+
+```
+
+\## Ler dataset
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df \<- readxl::read_excel("../dados/2019-10-16 AFAQ 2019.xlsx", sheet = 1)
+
+df \<- janitor::clean_names(df)
+
+```
+
+\\
+
+\## Tabela 1
+
+\### limpeza tabela 1
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df2 \<- df %\>%
+
+select("sexo":"pratica_outro_esporte")
+
+\`\`\`
+
+\\
+
+\### visualizar
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+glimpse(df2)
+
+summary(df2)
+
+\`\`\`
+
+\\
+
+\### limpeza de dados
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df3 \<- df2 %\>%
+
+mutate(
+
+\# dados categoricos
+
+sexo = as.factor(sexo),
+
+escolaridade = as.factor(nivel_de_escolaridade),
+
+vezes_por_semana = as.factor(voce_pratica_sua_modalidade_quantas_vezes_por_semana),
+
+lesao_no_ultimo_ano = as.factor(devido_a\_sua_queixa_lesao_no_ultimo_ano),
+
+renda = as.factor(possui_renda_pelo_esporte),
+
+esporte = as.factor(qual_esporte_voce_pratica_profissionalmente_competitivamente),
+
+tipo_esporte = as.factor(o_esporte_que_voce_pratica_e),
+
+outro_esporte = as.factor(pratica_outro_esporte),
+
+#dados coninuos
+
+peso = as.double(peso_kg),
+
+altura = as.double(altura_m),
+
+nascimento = lubridate::dmy(data_de_nascimento_dia_mes_ano),
+
+idade = as.integer((lubridate::today() - nascimento)/365),
+
+experiencia = as.double(quanto_tempo_de_experiencia_possui_no_esporte_meses),
+
+horas_por_semana = as.integer(quantas_horas_de_treino_voce_faz_na_semana),
+
+#calculo de imc
+
+imc = round(peso/(altura/100)\^2,1)
+
+) %\>%
+
+select(
+
+idade,
+
+peso,
+
+altura,
+
+imc,
+
+sexo,
+
+escolaridade,
+
+lesao_no_ultimo_ano,
+
+esporte,
+
+tipo_esporte,
+
+renda,
+
+experiencia,
+
+horas_por_semana,
+
+vezes_por_semana,
+
+outro_esporte
+
+)
+
+\`\`\`
+
+\\
+
+\### visualizar dados corrigidos
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+glimpse(df3)
+
+summary(df3)
+
+\`\`\`
+
+\\
+
+\#### idade
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df3 %\>%
+
+summarise(
+
+media = round(mean(idade),2),
+
+dp = round(sd(idade),2),
+
+mediana = median(idade),
+
+iqr = IQR(idade)
+
+) %\>%
+
+kable() %\>%
+
+kable_styling()
+
+hist(df3\$idade)
+
+\`\`\`
+
+\\
+
+\#### imc
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df3 %\>%
+
+summarise(
+
+media = round(mean(imc),2),
+
+dp = round(sd(imc),2),
+
+mediana = median(imc),
+
+iqr = IQR(imc)
+
+) %\>%
+
+kable() %\>%
+
+kable_styling()
+
+hist(df3\$imc)
+
+\`\`\`
+
+\\
+
+\#### experiência
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df3 %\>%
+
+summarise(
+
+media = round(mean(experiencia, na.rm = T),2),
+
+dp = round(sd(experiencia, na.rm = T),2),
+
+mediana = median(experiencia, na.rm = T),
+
+iqr = IQR(experiencia, na.rm = T)
+
+) %\>%
+
+kable() %\>%
+
+kable_styling()
+
+hist(df3\$experiencia)
+
+\`\`\`
+
+\\
+
+\#### horas na semana
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df3 %\>%
+
+summarise(
+
+media = round(mean(horas_por_semana, na.rm = T),2),
+
+dp = round(sd(horas_por_semana, na.rm = T),2),
+
+mediana = median(horas_por_semana, na.rm = T),
+
+iqr = IQR(horas_por_semana, na.rm = T)
+
+) %\>%
+
+kable() %\>%
+
+kable_styling()
+
+hist(df3\$horas_por_semana)
+
+\`\`\`
+
+\\
+
+\#### sexo
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df3 %\>%
+
+group_by(sexo) %\>%
+
+summarise(frequência = n()) %\>%
+
+mutate(proporção = paste(frequência/sum(frequência)\*100, "%")) %\>%
+
+kable() %\>%
+
+kable_styling()
+
+\`\`\`
+
+\\
+
+\#### escolaridade
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df3 %\>%
+
+group_by(escolaridade) %\>%
+
+summarise(frequência = n()) %\>%
+
+mutate(proporção = paste( frequência/sum(frequência)\*100, '%')) %\>%
+
+kable() %\>%
+
+kable_styling()
+
+\`\`\`
+
+\\
+
+\#### lesão no ultimo ano
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df3 %\>%
+
+group_by(lesao_no_ultimo_ano) %\>%
+
+summarise(frequência = n()) %\>%
+
+mutate(proporção = paste(frequência/sum(frequência)\*100, "%")) %\>%
+
+kable() %\>%
+
+kable_styling()
+
+\`\`\`
+
+\\
+
+\#### esporte
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df3 %\>%
+
+group_by(esporte) %\>%
+
+summarise(frequência = n()) %\>%
+
+mutate(proporção = paste(frequência/sum(frequência)\*100, "%")) %\>%
+
+kable() %\>%
+
+kable_styling()
+
+\`\`\`
+
+\\
+
+\#### tipo de esporte
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df3 %\>%
+
+group_by(tipo_esporte) %\>%
+
+summarise(frequência = n()) %\>%
+
+mutate(proporção = paste(frequência/sum(frequência)\*100, "%")) %\>%
+
+kable() %\>%
+
+kable_styling()
+
+\`\`\`
+
+\\
+
+\#### renda
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df3 %\>%
+
+group_by(renda) %\>%
+
+summarise(frequência = n()) %\>%
+
+mutate(proporção = paste(frequência/sum(frequência)\*100, "%")) %\>%
+
+kable() %\>%
+
+kable_styling()
+
+\`\`\`
+
+\\
+
+\#### vezes por semana
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df3 %\>%
+
+group_by(vezes_por_semana) %\>%
+
+summarise(frequência = n()) %\>%
+
+mutate(proporção = paste(frequência/sum(frequência)\*100, "%")) %\>%
+
+kable() %\>%
+
+kable_styling()
+
+\`\`\`
+
+\\
+
+\#### outro esporte
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df3 %\>%
+
+group_by(outro_esporte) %\>%
+
+summarise(frequência = n()) %\>%
+
+mutate(proporção = paste(frequência/sum(frequência)\*100, "%")) %\>%
+
+kable() %\>%
+
+kable_styling()
+
+\`\`\`
+
+\\
+
+\#### região do corpo
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df4 \<- df %\>%
+
+select(regiao = qual_regiao_do_corpo_e\_sua_queixa_lesao_atual) %\>%
+
+separate(col = regiao, into = c("q1","q2","q3","q4","q5","q6","q7","q8"), sep = ",") %\>%
+
+gather(regiao) %\>%
+
+select(value) %\>%
+
+filter(complete.cases(value))
+
+df4 %\>%
+
+select(parte_do_corpo = value) %\>%
+
+group_by(parte_do_corpo) %\>%
+
+summarise(frequência = n()) %\>%
+
+arrange(desc(frequência)) %\>%
+
+mutate(
+
+propoção = paste(round((frequência/sum(frequência)\*100), 1), "%")
+
+) %\>%
+
+kable() %\>%
+
+kable_styling()
+
+\`\`\`
+
+\\
+
+\`\`\`{r warning=FALSE, message=FALSE, include=FALSE}
+
+fabqQ1 \<- names(df)\[68\]
+
+fabqQ10 \<- names(df)\[83\]
+
+\`\`\`
+
+\\
+
+\## Limpando os questionários
+
+\### afaq
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df_afaq \<- df %\>%
+
+select(
+
+afaq\_ = eu_nunca_mais_serei_capaz_de_jogar_praticar_meu_esporte_como_antes_desta_lesao:quando_a\_minha_dor_esta_intensa_eu_me_preocupo_que_a\_minha_lesao_seja_muito_seria
+
+) %\>%
+
+mutate(
+
+afaq_1 = case_when(
+
+afaq_1 == "Discordo" \~ 1,
+
+afaq_1 == "Concordo Pouco" \~ 2,
+
+afaq_1 == "Concordo moderadamente" \~ 3,
+
+afaq_1 == "Concordo Bastante" \~ 4,
+
+afaq_1 == "Concordo Totalmente" \~ 5
+
+),
+
+afaq_2 = case_when(
+
+afaq_2 == "Discordo" \~ 1,
+
+afaq_2 == "Concordo Pouco" \~ 2,
+
+afaq_2 == "Concordo moderadamente" \~ 3,
+
+afaq_2 == "Concordo Bastante" \~ 4,
+
+afaq_2 == "Concordo Totalmente" \~ 5
+
+),
+
+afaq_3 = case_when(
+
+afaq_3 == "Discordo" \~ 1,
+
+afaq_3 == "Concordo Pouco" \~ 2,
+
+afaq_3 == "Concordo moderadamente" \~ 3,
+
+afaq_3 == "Concordo Bastante" \~ 4,
+
+afaq_3 == "Concordo Totalmente" \~ 5
+
+),
+
+afaq_4 = case_when(
+
+afaq_4 == "Discordo" \~ 1,
+
+afaq_4 == "Concordo Pouco" \~ 2,
+
+afaq_4 == "Concordo moderadamente" \~ 3,
+
+afaq_4 == "Concordo Bastante" \~ 4,
+
+afaq_4 == "Concordo Totalmente" \~ 5
+
+),
+
+afaq_5 = case_when(
+
+afaq_5 == "Discordo" \~ 1,
+
+afaq_5 == "Concordo Pouco" \~ 2,
+
+afaq_5 == "Concordo moderadamente" \~ 3,
+
+afaq_5 == "Concordo Bastante" \~ 4,
+
+afaq_5 == "Concordo Totalmente" \~ 5
+
+),
+
+afaq_6 = case_when(
+
+afaq_6 == "Discordo" \~ 1,
+
+afaq_6 == "Concordo Pouco" \~ 2,
+
+afaq_6 == "Concordo moderadamente" \~ 3,
+
+afaq_6 == "Concordo Bastante" \~ 4,
+
+afaq_6 == "Concordo Totalmente" \~ 5
+
+),
+
+afaq_7 = case_when(
+
+afaq_7 == "Discordo" \~ 1,
+
+afaq_7 == "Concordo Pouco" \~ 2,
+
+afaq_7 == "Concordo moderadamente" \~ 3,
+
+afaq_7 == "Concordo Bastante" \~ 4,
+
+afaq_7 == "Concordo Totalmente" \~ 5
+
+),
+
+afaq_8 = case_when(
+
+afaq_8 == "Discordo" \~ 1,
+
+afaq_8 == "Concordo Pouco" \~ 2,
+
+afaq_8 == "Concordo moderadamente" \~ 3,
+
+afaq_8 == "Concordo Bastante" \~ 4,
+
+afaq_8 == "Concordo Totalmente" \~ 5
+
+),
+
+afaq_9 = case_when(
+
+afaq_9 == "Discordo" \~ 1,
+
+afaq_9 == "Concordo Pouco" \~ 2,
+
+afaq_9 == "Concordo moderadamente" \~ 3,
+
+afaq_9 == "Concordo Bastante" \~ 4,
+
+afaq_9 == "Concordo Totalmente" \~ 5
+
+),
+
+afaq_10 = case_when(
+
+afaq_10 == "Discordo" \~ 1,
+
+afaq_10 == "Concordo Pouco" \~ 2,
+
+afaq_10 == "Concordo moderadamente" \~ 3,
+
+afaq_10 == "Concordo Bastante" \~ 4,
+
+afaq_10 == "Concordo Totalmente" \~ 5
+
+),
+
+)
+
+\`\`\`
+
+\\
+
+\### pcs
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df_pcs \<- df %\>%
+
+select(
+
+pcs\_ = a_preocupacao_durante_todo_o\_tempo_com_a\_duracao_da_dor_e:a_preocupacao_que_alguma_coisa_ruim_pode_acontecer_por_causa_da_dor_e
+
+)%\>%
+
+mutate(
+
+pcs_1 = case_when(
+
+pcs_1 == "0-MINIMA" \~ 1,
+
+pcs_1 == "1-LEVE" \~ 2,
+
+pcs_1 == "2-MODERADO" \~ 3,
+
+pcs_1 == "3-INTENSA" \~ 4,
+
+pcs_1 == "4-MUITO INTENSA" \~ 5
+
+),
+
+pcs_2 = case_when(
+
+pcs_2 == "0-MINIMA" \~ 1,
+
+pcs_2 == "1-LEVE" \~ 2,
+
+pcs_2 == "2-MODERADO" \~ 3,
+
+pcs_2 == "3-INTENSA" \~ 4,
+
+pcs_2 == "4-MUITO INTENSA" \~ 5
+
+),
+
+pcs_3 = case_when(
+
+pcs_3 == "0-MINIMA" \~ 1,
+
+pcs_3 == "1-LEVE" \~ 2,
+
+pcs_3 == "2-MODERADO" \~ 3,
+
+pcs_3 == "3-INTENSA" \~ 4,
+
+pcs_3 == "4-MUITO INTENSA" \~ 5
+
+),
+
+pcs_4 = case_when(
+
+pcs_4 == "0-MINIMA" \~ 1,
+
+pcs_4 == "1-LEVE" \~ 2,
+
+pcs_4 == "2-MODERADO" \~ 3,
+
+pcs_4 == "3-INTENSA" \~ 4,
+
+pcs_4 == "4-MUITO INTENSA" \~ 5
+
+),
+
+pcs_5 = case_when(
+
+pcs_5 == "0-MINIMA" \~ 1,
+
+pcs_5 == "1-LEVE" \~ 2,
+
+pcs_5 == "2-MODERADO" \~ 3,
+
+pcs_5 == "3-INTENSA" \~ 4,
+
+pcs_5 == "4-MUITO INTENSA" \~ 5
+
+),
+
+pcs_6 = case_when(
+
+pcs_6 == "0-MINIMA" \~ 1,
+
+pcs_6 == "1-LEVE" \~ 2,
+
+pcs_6 == "2-MODERADO" \~ 3,
+
+pcs_6 == "3-INTENSA" \~ 4,
+
+pcs_6 == "4-MUITO INTENSA" \~ 5
+
+),
+
+pcs_7 = case_when(
+
+pcs_7 == "0-MINIMA" \~ 1,
+
+pcs_7 == "1-LEVE" \~ 2,
+
+pcs_7 == "2-MODERADO" \~ 3,
+
+pcs_7 == "3-INTENSA" \~ 4,
+
+pcs_7 == "4-MUITO INTENSA" \~ 5
+
+),
+
+pcs_8 = case_when(
+
+pcs_8 == "0-MINIMA" \~ 1,
+
+pcs_8 == "1-LEVE" \~ 2,
+
+pcs_8 == "2-MODERADO" \~ 3,
+
+pcs_8 == "3-INTENSA" \~ 4,
+
+pcs_8 == "4-MUITO INTENSA" \~ 5
+
+),
+
+pcs_9 = case_when(
+
+pcs_9 == "0-MINIMA" \~ 1,
+
+pcs_9 == "1-LEVE" \~ 2,
+
+pcs_9 == "2-MODERADO" \~ 3,
+
+pcs_9 == "3-INTENSA" \~ 4,
+
+pcs_9 == "4-MUITO INTENSA" \~ 5
+
+),
+
+pcs_10 = case_when(
+
+pcs_10 == "0-MINIMA" \~ 1,
+
+pcs_10 == "1-LEVE" \~ 2,
+
+pcs_10 == "2-MODERADO" \~ 3,
+
+pcs_10 == "3-INTENSA" \~ 4,
+
+pcs_10 == "4-MUITO INTENSA" \~ 5
+
+),
+
+pcs_11 = case_when(
+
+pcs_11 == "0-MINIMA" \~ 1,
+
+pcs_11 == "1-LEVE" \~ 2,
+
+pcs_11 == "2-MODERADO" \~ 3,
+
+pcs_11 == "3-INTENSA" \~ 4,
+
+pcs_11 == "4-MUITO INTENSA" \~ 5
+
+),
+
+pcs_12 = case_when(
+
+pcs_12 == "0-MINIMA" \~ 1,
+
+pcs_12 == "1-LEVE" \~ 2,
+
+pcs_12 == "2-MODERADO" \~ 3,
+
+pcs_12 == "3-INTENSA" \~ 4,
+
+pcs_12 == "4-MUITO INTENSA" \~ 5
+
+),
+
+pcs_13 = case_when(
+
+pcs_13 == "0-MINIMA" \~ 1,
+
+pcs_13 == "1-LEVE" \~ 2,
+
+pcs_13 == "2-MODERADO" \~ 3,
+
+pcs_13 == "3-INTENSA" \~ 4,
+
+pcs_13 == "4-MUITO INTENSA" \~ 5
+
+),
+
+)
+
+\`\`\`
+
+####Sub-escalas PCS
+
+hel = Helplessness
+
+mag = Magnification
+
+rum = Rumination
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df_pcs_hel \<- df_pcs %\>%
+
+select(pcs_8, pcs_9, pcs_10, pcs_11)
+
+df_pcs_mag \<- df_pcs %\>%
+
+select(pcs_6, pcs_7, pcs_13)
+
+df_pcs_rum \<- df_pcs %\>%
+
+select(pcs_1, pcs_2, pcs_3, pcs_4, pcs_5, pcs_12)
+
+\`\`\`
+
+\\
+
+\### tampa
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df_tampa \<- df %\>%
+
+select(
+
+tampa\_ = eu_tenho_medo_que_eu_possa_me_machucar_se_eu_fizer_exercicios:ninguem_deveria_fazer_exercicios_quando_esta_com_dor
+
+) %\>%
+
+mutate(
+
+tampa_1 = case_when(
+
+tampa_1 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_1 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_1 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_1 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_2 = case_when(
+
+tampa_2 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_2 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_2 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_2 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_3 = case_when(
+
+tampa_3 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_3 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_3 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_3 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_4 = case_when( #invertido
+
+tampa_4 == "DISCORDO TOTALMENTE" \~ 4,
+
+tampa_4 == "DISCORDO PARCIALMENTE" \~ 3,
+
+tampa_4 == "CONCORDO PARCIALMENTE" \~ 2,
+
+tampa_4 == "CONCORDO TOTALMENTE" \~ 1
+
+),
+
+tampa_5 = case_when(
+
+tampa_5 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_5 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_5 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_5 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_6 = case_when(
+
+tampa_6 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_6 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_6 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_6 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_7 = case_when(
+
+tampa_7 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_7 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_7 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_7 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_8 = case_when(#invertido
+
+tampa_8 == "DISCORDO TOTALMENTE" \~ 4,
+
+tampa_8 == "DISCORDO PARCIALMENTE" \~ 3,
+
+tampa_8 == "CONCORDO PARCIALMENTE" \~ 2,
+
+tampa_8 == "CONCORDO TOTALMENTE" \~ 1
+
+),
+
+tampa_9 = case_when(
+
+tampa_9 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_9 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_9 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_9 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_10 = case_when(
+
+tampa_10 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_10 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_10 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_10 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_11 = case_when(
+
+tampa_11 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_11 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_11 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_11 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_12 = case_when( #invertido
+
+tampa_12 == "DISCORDO TOTALMENTE" \~ 4,
+
+tampa_12 == "DISCORDO PARCIALMENTE" \~ 3,
+
+tampa_12 == "CONCORDO PARCIALMENTE" \~ 2,
+
+tampa_12 == "CONCORDO TOTALMENTE" \~ 1
+
+),
+
+tampa_13 = case_when(
+
+tampa_13 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_13 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_13 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_13 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_14 = case_when(
+
+tampa_14 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_14 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_14 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_14 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_15 = case_when(
+
+tampa_15 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_15 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_15 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_15 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_16 = case_when( #invertido
+
+tampa_16 == "DISCORDO TOTALMENTE" \~ 4,
+
+tampa_16 == "DISCORDO PARCIALMENTE" \~ 3,
+
+tampa_16 == "CONCORDO PARCIALMENTE" \~ 2,
+
+tampa_16 == "CONCORDO TOTALMENTE" \~ 1
+
+),
+
+tampa_17 = case_when(
+
+tampa_17 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_17 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_17 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_17 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+)
+
+\`\`\`
+
+\\
+
+\### tampa invertido
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df_tampa_invert \<- df %\>%
+
+select(
+
+tampa\_ = eu_tenho_medo_que_eu_possa_me_machucar_se_eu_fizer_exercicios:ninguem_deveria_fazer_exercicios_quando_esta_com_dor
+
+) %\>%
+
+mutate(
+
+tampa_1 = case_when(
+
+tampa_1 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_1 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_1 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_1 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_2 = case_when(
+
+tampa_2 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_2 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_2 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_2 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_3 = case_when(
+
+tampa_3 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_3 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_3 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_3 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_4 = case_when(
+
+tampa_4 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_4 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_4 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_4 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_5 = case_when(
+
+tampa_5 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_5 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_5 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_5 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_6 = case_when(
+
+tampa_6 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_6 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_6 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_6 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_7 = case_when(
+
+tampa_7 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_7 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_7 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_7 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_8 = case_when(
+
+tampa_8 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_8 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_8 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_8 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_9 = case_when(
+
+tampa_9 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_9 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_9 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_9 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_10 = case_when(
+
+tampa_10 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_10 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_10 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_10 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_11 = case_when(
+
+tampa_11 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_11 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_11 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_11 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_12 = case_when(
+
+tampa_12 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_12 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_12 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_12 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_13 = case_when(
+
+tampa_13 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_13 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_13 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_13 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_14 = case_when(
+
+tampa_14 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_14 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_14 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_14 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_15 = case_when(
+
+tampa_15 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_15 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_15 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_15 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_16 = case_when(
+
+tampa_16 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_16 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_16 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_16 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+tampa_17 = case_when(
+
+tampa_17 == "DISCORDO TOTALMENTE" \~ 1,
+
+tampa_17 == "DISCORDO PARCIALMENTE" \~ 2,
+
+tampa_17 == "CONCORDO PARCIALMENTE" \~ 3,
+
+tampa_17 == "CONCORDO TOTALMENTE" \~ 4
+
+),
+
+)
+
+\`\`\`
+
+\\
+
+\### fabq
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df_fabq \<- df %\>%
+
+select(
+
+fabq\_ = fabqQ1:fabqQ10
+
+) %\>%
+
+mutate(
+
+fabq_1 = case_when(
+
+fabq_1 == "0" \~ 1,
+
+fabq_1 == "1" \~ 2,
+
+fabq_1 == "2" \~ 3,
+
+fabq_1 == "3" \~ 4,
+
+fabq_1 == "4" \~ 5,
+
+fabq_1 == "5" \~ 6,
+
+fabq_1 == "6" \~ 7
+
+),
+
+fabq_2 = case_when(
+
+fabq_2 == "0" \~ 1,
+
+fabq_2 == "1" \~ 2,
+
+fabq_2 == "2" \~ 3,
+
+fabq_2 == "3" \~ 4,
+
+fabq_2 == "4" \~ 5,
+
+fabq_2 == "5" \~ 6,
+
+fabq_2 == "6" \~ 7
+
+),
+
+fabq_3 = case_when(
+
+fabq_3 == "0" \~ 1,
+
+fabq_3 == "1" \~ 2,
+
+fabq_3 == "2" \~ 3,
+
+fabq_3 == "3" \~ 4,
+
+fabq_3 == "4" \~ 5,
+
+fabq_3 == "5" \~ 6,
+
+fabq_3 == "6" \~ 7
+
+),
+
+fabq_4 = case_when(
+
+fabq_4 == "0" \~ 1,
+
+fabq_4 == "1" \~ 2,
+
+fabq_4 == "2" \~ 3,
+
+fabq_4 == "3" \~ 4,
+
+fabq_4 == "4" \~ 5,
+
+fabq_4 == "5" \~ 6,
+
+fabq_4 == "6" \~ 7
+
+),
+
+fabq_5 = case_when(
+
+fabq_5 == "0" \~ 1,
+
+fabq_5 == "1" \~ 2,
+
+fabq_5 == "2" \~ 3,
+
+fabq_5 == "3" \~ 4,
+
+fabq_5 == "4" \~ 5,
+
+fabq_5 == "5" \~ 6,
+
+fabq_5 == "6" \~ 7
+
+),
+
+fabq_6 = case_when(
+
+fabq_6 == "0" \~ 1,
+
+fabq_6 == "1" \~ 2,
+
+fabq_6 == "2" \~ 3,
+
+fabq_6 == "3" \~ 4,
+
+fabq_6 == "4" \~ 5,
+
+fabq_6 == "5" \~ 6,
+
+fabq_6 == "6" \~ 7
+
+),
+
+fabq_7 = case_when(
+
+fabq_7 == "0" \~ 1,
+
+fabq_7 == "1" \~ 2,
+
+fabq_7 == "2" \~ 3,
+
+fabq_7 == "3" \~ 4,
+
+fabq_7 == "4" \~ 5,
+
+fabq_7 == "5" \~ 6,
+
+fabq_7 == "6" \~ 7
+
+),
+
+fabq_8 = case_when(
+
+fabq_8 == "0" \~ 1,
+
+fabq_8 == "1" \~ 2,
+
+fabq_8 == "2" \~ 3,
+
+fabq_8 == "3" \~ 4,
+
+fabq_8 == "4" \~ 5,
+
+fabq_8 == "5" \~ 6,
+
+fabq_8 == "6" \~ 7
+
+),
+
+fabq_9 = case_when(
+
+fabq_9 == "0" \~ 1,
+
+fabq_9 == "1" \~ 2,
+
+fabq_9 == "2" \~ 3,
+
+fabq_9 == "3" \~ 4,
+
+fabq_9 == "4" \~ 5,
+
+fabq_9 == "5" \~ 6,
+
+fabq_9 == "6" \~ 7
+
+),
+
+fabq_10 = case_when(
+
+fabq_10 == "0" \~ 1,
+
+fabq_10 == "1" \~ 2,
+
+fabq_10 == "2" \~ 3,
+
+fabq_10 == "3" \~ 4,
+
+fabq_10 == "4" \~ 5,
+
+fabq_10 == "5" \~ 6,
+
+fabq_10 == "6" \~ 7
+
+),
+
+fabq_11 = case_when(
+
+fabq_11 == "0" \~ 1,
+
+fabq_11 == "1" \~ 2,
+
+fabq_11 == "2" \~ 3,
+
+fabq_11 == "3" \~ 4,
+
+fabq_11 == "4" \~ 5,
+
+fabq_11 == "5" \~ 6,
+
+fabq_11 == "6" \~ 7
+
+),
+
+fabq_12 = case_when(
+
+fabq_12 == "0" \~ 1,
+
+fabq_12 == "1" \~ 2,
+
+fabq_12 == "2" \~ 3,
+
+fabq_12 == "3" \~ 4,
+
+fabq_12 == "4" \~ 5,
+
+fabq_12 == "5" \~ 6,
+
+fabq_12 == "6" \~ 7
+
+),
+
+fabq_13 = case_when(
+
+fabq_13 == "0" \~ 1,
+
+fabq_13 == "1" \~ 2,
+
+fabq_13 == "2" \~ 3,
+
+fabq_13 == "3" \~ 4,
+
+fabq_13 == "4" \~ 5,
+
+fabq_13 == "5" \~ 6,
+
+fabq_13 == "6" \~ 7
+
+),
+
+fabq_14 = case_when(
+
+fabq_14 == "0" \~ 1,
+
+fabq_14 == "1" \~ 2,
+
+fabq_14 == "2" \~ 3,
+
+fabq_14 == "3" \~ 4,
+
+fabq_14 == "4" \~ 5,
+
+fabq_14 == "5" \~ 6,
+
+fabq_14 == "6" \~ 7
+
+),
+
+fabq_15 = case_when(
+
+fabq_15 == "0" \~ 1,
+
+fabq_15 == "1" \~ 2,
+
+fabq_15 == "2" \~ 3,
+
+fabq_15 == "3" \~ 4,
+
+fabq_15 == "4" \~ 5,
+
+fabq_15 == "5" \~ 6,
+
+fabq_15 == "6" \~ 7
+
+),
+
+fabq_16 = case_when(
+
+fabq_16 == "0" \~ 1,
+
+fabq_16 == "1" \~ 2,
+
+fabq_16 == "2" \~ 3,
+
+fabq_16 == "3" \~ 4,
+
+fabq_16 == "4" \~ 5,
+
+fabq_16 == "5" \~ 6,
+
+fabq_16 == "6" \~ 7
+
+),
+
+)
+
+\`\`\`
+
+####Sub-escalas FABQ
+
+phy = Physicxal active
+
+wor = Work
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+df_fabq_phy \<- df_fabq %\>%
+
+select(fabq_1, fabq_2, fabq_3, fabq_4, fabq_5)
+
+df_fabq_wok \<- df_fabq %\>%
+
+select(fabq_6, fabq_7, fabq_8, fabq_9, fabq_10,fabq_11, fabq_12, fabq_13, fabq_14, fabq_15, fabq_16)
+
+\`\`\`
+
+\\
+
+\## Internal Consistency
+
+\### alfa de Cronbach
+
+####afaq
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+alpha_afaq \<- alpha(df_afaq)
+
+alpha_afaq
+
+\`\`\`
+
+\\
+
+\#### pcs
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+alpha_pcs \<- alpha(df_pcs)
+
+alpha_pcs
+
+\`\`\`
+
+\\
+
+\#### tampa
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+alpha_tampa_invert \<- alpha(df_tampa_invert)
+
+alpha_tampa_invert
+
+\`\`\`
+
+\\
+
+\#### fabq
+
+\`\`\`{r warning=FALSE, message=FALSE}
+
+alpha_fabq \<- alpha(df_fabq)
+
+alpha_fabq
+
+\`\`\`
+
+\\
